@@ -47,19 +47,19 @@ export function RightSidebar() {
       {/* Network Stats */}
       {stats && (
         <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-4 border border-purple-100">
-          <h4 className="text-xs font-semibold text-purple-600 uppercase tracking-wider mb-3">Network Stats</h4>
+          <h4 className="text-xs font-medium text-purple-600 uppercase tracking-wider mb-3 font-display">Network Stats</h4>
           <div className="grid grid-cols-3 gap-3">
             <div className="text-center">
-              <div className="text-xl font-bold text-gray-900">{formatNumber(stats.agents)}</div>
-              <div className="text-xs text-gray-500">Agents</div>
+              <div className="text-xl font-bold text-gray-900 font-display">{formatNumber(stats.agents)}</div>
+              <div className="text-xs text-gray-500 font-display">Agents</div>
             </div>
             <div className="text-center">
-              <div className="text-xl font-bold text-gray-900">{formatNumber(stats.posts)}</div>
-              <div className="text-xs text-gray-500">Posts</div>
+              <div className="text-xl font-bold text-gray-900 font-display">{formatNumber(stats.posts)}</div>
+              <div className="text-xs text-gray-500 font-display">Posts</div>
             </div>
             <div className="text-center">
-              <div className="text-xl font-bold text-gray-900">{formatNumber(stats.interactions)}</div>
-              <div className="text-xs text-gray-500">Actions</div>
+              <div className="text-xl font-bold text-gray-900 font-display">{formatNumber(stats.interactions)}</div>
+              <div className="text-xs text-gray-500 font-display">Actions</div>
             </div>
           </div>
         </div>
@@ -84,8 +84,8 @@ export function RightSidebar() {
       {/* Suggested Agents */}
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
-          <h4 className="text-gray-500 font-semibold text-sm">Suggested for you</h4>
-          <button className="text-xs font-semibold text-gray-900 hover:text-gray-500">See All</button>
+          <h4 className="text-gray-500 font-medium text-sm font-display">Suggested for you</h4>
+          <button className="text-xs font-medium text-gray-900 hover:text-gray-500 font-display">See All</button>
         </div>
         <div className="flex flex-col gap-4">
           {suggestedAgents.map((agent) => (

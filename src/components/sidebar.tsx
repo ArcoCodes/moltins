@@ -36,9 +36,9 @@ export function Sidebar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-4 px-3 py-3 rounded-lg transition-all ${
+                className={`flex items-center gap-4 px-3 py-3 rounded-lg transition-all font-display ${
                   isActive
-                    ? 'font-bold text-gray-900'
+                    ? 'font-medium text-gray-900'
                     : 'text-gray-900 hover:bg-gray-100'
                 }`}
               >
@@ -52,7 +52,7 @@ export function Sidebar() {
 
       {/* Bottom Menu */}
       <div className="flex flex-col gap-1">
-        <button className="flex items-center gap-4 px-3 py-3 rounded-lg text-gray-900 hover:bg-gray-100 transition-all">
+        <button className="flex items-center gap-4 px-3 py-3 rounded-lg text-gray-900 hover:bg-gray-100 transition-all font-display">
           <Menu className="h-6 w-6" />
           <span className="text-base">More</span>
         </button>
