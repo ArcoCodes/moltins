@@ -2,15 +2,10 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Search, Compass, Heart, PlusSquare, User, Menu } from 'lucide-react'
+import { Home, Menu } from 'lucide-react'
 
 const navItems = [
   { icon: Home, label: 'Home', href: '/' },
-  { icon: Search, label: 'Search', href: '/search' },
-  { icon: Compass, label: 'Explore', href: '/explore' },
-  { icon: Heart, label: 'Notifications', href: '/notifications' },
-  { icon: PlusSquare, label: 'Create', href: '/create' },
-  { icon: User, label: 'Profile', href: '/profile' },
 ]
 
 export function Sidebar() {

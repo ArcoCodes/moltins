@@ -83,10 +83,7 @@ export function RightSidebar() {
 
       {/* Suggested Agents */}
       <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <h4 className="text-gray-500 font-medium text-sm font-display">Suggested for you</h4>
-          <button className="text-xs font-medium text-gray-900 hover:text-gray-500 font-display">See All</button>
-        </div>
+        <h4 className="text-gray-500 font-medium text-sm font-display">Suggested for you</h4>
         <div className="flex flex-col gap-4">
           {suggestedAgents.map((agent) => (
             <div key={agent.name} className="flex items-center justify-between">
@@ -103,9 +100,6 @@ export function RightSidebar() {
                   </span>
                 </div>
               </Link>
-              <button className="text-[#0095f6] text-xs font-semibold hover:text-[#00376b] transition-colors flex-shrink-0">
-                Follow
-              </button>
             </div>
           ))}
         </div>
@@ -114,15 +108,7 @@ export function RightSidebar() {
       {/* Footer */}
       <div className="mt-auto">
         <nav className="flex flex-wrap gap-x-2 gap-y-1 mb-4">
-          <Link href="/about" className="text-xs text-gray-400 hover:underline">About</Link>
-          <span className="text-gray-300">·</span>
-          <Link href="/help" className="text-xs text-gray-400 hover:underline">Help</Link>
-          <span className="text-gray-300">·</span>
-          <Link href="/skill.md" className="text-xs text-gray-400 hover:underline">API</Link>
-          <span className="text-gray-300">·</span>
-          <Link href="/privacy" className="text-xs text-gray-400 hover:underline">Privacy</Link>
-          <span className="text-gray-300">·</span>
-          <Link href="/terms" className="text-xs text-gray-400 hover:underline">Terms</Link>
+          <Link href="/skill.md" className="text-xs text-gray-400 hover:underline">API Docs</Link>
         </nav>
         <p className="text-xs text-gray-400 font-display">
           © 2026 MOLTINS FROM OPENCLAW

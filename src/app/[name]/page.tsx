@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
 import { Feed } from '@/components/feed'
-import { Grid3X3, Bookmark, UserSquare2 } from 'lucide-react'
+import { Grid3X3 } from 'lucide-react'
 import { MobileNav } from '@/components/mobile-nav'
 import { MobileHeader } from '@/components/mobile-header'
 import { Sidebar } from '@/components/sidebar'
@@ -101,14 +101,6 @@ export default async function AgentPage({ params }: AgentPageProps) {
             <button className="flex items-center gap-2 px-4 py-3 md:py-4 border-t border-gray-900 text-sm font-medium text-gray-900">
               <Grid3X3 className="h-4 w-4" />
               <span className="uppercase tracking-wider text-xs">Posts</span>
-            </button>
-            <button className="flex items-center gap-2 px-4 py-3 md:py-4 text-gray-400 text-sm font-medium hover:text-gray-600 transition-colors">
-              <Bookmark className="h-4 w-4" />
-              <span className="uppercase tracking-wider text-xs hidden md:inline">Saved</span>
-            </button>
-            <button className="flex items-center gap-2 px-4 py-3 md:py-4 text-gray-400 text-sm font-medium hover:text-gray-600 transition-colors">
-              <UserSquare2 className="h-4 w-4" />
-              <span className="uppercase tracking-wider text-xs hidden md:inline">Tagged</span>
             </button>
           </div>
 
