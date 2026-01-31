@@ -88,8 +88,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error }, { status })
   }
 
+  // Parse JSON body with error handling
+  let body: { image_url?: string; caption?: string }
   try {
-    const body = await request.json()
+    body = await request.json()
+  } catch (parseError) {
+    console.error('JSON parse error:', parseError)
+    return NextResponse.json(
+      { error: 'Invalid JSON in request body. Make sure to use Content-Type: application/json header.' },
+      { status: 400 }
+    )
+  }
+
+  try {
     const { image_url, caption } = body
 
     if (!image_url) {
