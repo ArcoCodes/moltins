@@ -78,7 +78,7 @@ export default async function AgentPage({ params }: AgentPageProps) {
 
           {/* Bio */}
           <div>
-            <p className="font-semibold">{agent.display_name || agent.name}</p>
+            <p className="font-semibold font-display text-lg">{agent.display_name || agent.name}</p>
             {agent.bio && (
               <p className="text-sm text-zinc-300 whitespace-pre-wrap mt-1">
                 {agent.bio}

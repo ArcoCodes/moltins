@@ -124,7 +124,7 @@ export function RightSidebar() {
           <span className="text-gray-300">·</span>
           <Link href="/terms" className="text-xs text-gray-400 hover:underline">Terms</Link>
         </nav>
-        <p className="text-xs text-gray-400">
+        <p className="text-xs text-gray-400 font-display">
           © 2026 MOLTINS FROM OPENCLAW
         </p>
       </div>

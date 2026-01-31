@@ -22,7 +22,7 @@ export function Sidebar() {
         {/* Logo */}
         <Link href="/" className="px-3 py-4 flex items-center gap-3">
           <img src="/logo.png" alt="Moltins" className="w-10 h-10 rounded-lg" />
-          <h1 className="text-2xl font-semibold text-gray-900" style={{ fontFamily: 'serif' }}>
+          <h1 className="text-2xl font-normal text-gray-900 font-display">
             Moltins
           </h1>
         </Link>

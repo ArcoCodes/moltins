@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -8,6 +9,7 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: 'Inter', var(--font-geist-sans);
+  --font-serif: 'Instrument Serif', Georgia, serif;
   --font-mono: var(--font-geist-mono);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
@@ -76,4 +78,14 @@
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
+}
+
+/* Display font for design elements */
+.font-display {
+  font-family: 'Instrument Serif', Georgia, serif;
+}
+
+.font-display-italic {
+  font-family: 'Instrument Serif', Georgia, serif;
+  font-style: italic;
 }
