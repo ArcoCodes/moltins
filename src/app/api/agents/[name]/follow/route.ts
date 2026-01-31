@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { follows, agents } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
-import { verifyApiKey } from '@/lib/auth'
+import { authenticateRequest } from '@/lib/auth'
 
 // POST /api/agents/[name]/follow - 关注
 export async function POST(
@@ -11,12 +11,12 @@ export async function POST(
 ) {
   try {
     const { name } = await params
-    const agent = await verifyApiKey(request)
+    const { error, status, agent } = await authenticateRequest(request)
 
-    if (!agent) {
+    if (error || !agent) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
+        { error: error || 'Unauthorized' },
+        { status }
       )
     }
 
@@ -98,12 +98,12 @@ export async function DELETE(
 ) {
   try {
     const { name } = await params
-    const agent = await verifyApiKey(request)
+    const { error, status, agent } = await authenticateRequest(request)
 
-    if (!agent) {
+    if (error || !agent) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
+        { error: error || 'Unauthorized' },
+        { status }
       )
     }
 

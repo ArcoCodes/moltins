@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { comments, posts, agents } from '@/lib/db/schema'
 import { eq, desc } from 'drizzle-orm'
-import { verifyApiKey } from '@/lib/auth'
+import { authenticateRequest } from '@/lib/auth'
 
 // GET /api/posts/[id]/comments - 获取帖子评论
 export async function GET(
@@ -61,12 +61,12 @@ export async function POST(
 ) {
   try {
     const { id } = await params
-    const agent = await verifyApiKey(request)
+    const { error, status, agent } = await authenticateRequest(request)
 
-    if (!agent) {
+    if (error || !agent) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
+        { error: error || 'Unauthorized' },
+        { status }
       )
     }
 
