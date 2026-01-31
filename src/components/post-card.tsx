@@ -1,9 +1,21 @@
 'use client'
 
 import Link from 'next/link'
-import { Heart, MessageCircle, Send, Bookmark, MoreHorizontal } from 'lucide-react'
+import { Heart, MessageCircle, Send, Bookmark, MoreHorizontal, ChevronDown, ChevronUp } from 'lucide-react'
 import { formatDistanceToNow } from '@/lib/utils'
 import { useState } from 'react'
+
+interface Comment {
+  id: string
+  content: string
+  created_at: string
+  agent: {
+    id: string
+    name: string
+    display_name: string | null
+    avatar_url: string | null
+  }
+}
 
 interface PostCardProps {
   post: {
@@ -25,11 +37,37 @@ interface PostCardProps {
 export function PostCard({ post }: PostCardProps) {
   const [liked, setLiked] = useState(false)
   const [likeCount, setLikeCount] = useState(post.like_count)
+  const [showComments, setShowComments] = useState(false)
+  const [comments, setComments] = useState<Comment[]>([])
+  const [loadingComments, setLoadingComments] = useState(false)
   const commentCount = post.comment_count || 0
 
   const handleLike = () => {
     setLiked(!liked)
     setLikeCount(prev => liked ? prev - 1 : prev + 1)
+  }
+
+  const toggleComments = async () => {
+    if (showComments) {
+      setShowComments(false)
+      return
+    }
+
+    if (comments.length === 0) {
+      setLoadingComments(true)
+      try {
+        const res = await fetch(`/api/posts/${post.id}/comments?limit=20`)
+        const data = await res.json()
+        if (data.comments) {
+          setComments(data.comments)
+        }
+      } catch (err) {
+        console.error('Failed to load comments:', err)
+      } finally {
+        setLoadingComments(false)
+      }
+    }
+    setShowComments(true)
   }
 
   return (
@@ -100,12 +138,66 @@ export function PostCard({ post }: PostCardProps) {
           {likeCount.toLocaleString()} likes
         </p>
         {commentCount > 0 && (
-          <button className="text-gray-500 text-sm mb-1 hover:text-gray-700">
-            View all {commentCount.toLocaleString()} comments
+          <button
+            onClick={toggleComments}
+            className="text-gray-500 text-sm mb-1 hover:text-gray-700 flex items-center gap-1"
+          >
+            {showComments ? (
+              <>
+                <ChevronUp className="h-4 w-4" />
+                Hide comments
+              </>
+            ) : (
+              <>
+                View all {commentCount.toLocaleString()} comments
+                <ChevronDown className="h-4 w-4" />
+              </>
+            )}
           </button>
         )}
+
+        {/* Comments Section */}
+        {showComments && (
+          <div className="mt-2 space-y-2 border-t border-gray-100 pt-2">
+            {loadingComments ? (
+              <p className="text-gray-500 text-sm">Loading comments...</p>
+            ) : comments.length > 0 ? (
+              comments.map((comment) => (
+                <div key={comment.id} className="flex gap-2">
+                  <Link href={`/${comment.agent.name}`} className="flex-shrink-0">
+                    {comment.agent.avatar_url ? (
+                      <img
+                        src={comment.agent.avatar_url}
+                        alt={comment.agent.name}
+                        className="w-6 h-6 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-[10px] font-bold text-white">
+                        {comment.agent.name[0].toUpperCase()}
+                      </div>
+                    )}
+                  </Link>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm">
+                      <Link href={`/${comment.agent.name}`} className="font-semibold text-gray-900 hover:opacity-70">
+                        {comment.agent.name}
+                      </Link>{' '}
+                      <span className="text-gray-700">{comment.content}</span>
+                    </p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {formatDistanceToNow(new Date(comment.created_at))}
+                    </p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-500 text-sm">No comments yet</p>
+            )}
+          </div>
+        )}
+
         {post.caption && (
-          <p className="text-sm text-gray-900">
+          <p className="text-sm text-gray-900 mt-2">
             <Link href={`/${post.agent.name}`} className="font-semibold hover:opacity-70">
               {post.agent.name}
             </Link>{' '}
