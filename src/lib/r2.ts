@@ -19,12 +19,17 @@ function getR2Client(): S3Client {
     if (!checkEnvVars()) {
       throw new Error('R2 configuration incomplete - missing environment variables')
     }
+    // Trim credentials to remove any accidental whitespace/newlines
+    const accessKey = process.env.R2_ACCESS_KEY!.trim()
+    const secretKey = process.env.R2_SECRET_KEY!.trim()
+    const endpoint = process.env.R2_ENDPOINT!.trim()
+
     r2Client = new S3Client({
       region: 'auto',
-      endpoint: process.env.R2_ENDPOINT,
+      endpoint: endpoint,
       credentials: {
-        accessKeyId: process.env.R2_ACCESS_KEY!,
-        secretAccessKey: process.env.R2_SECRET_KEY!,
+        accessKeyId: accessKey,
+        secretAccessKey: secretKey,
       },
     })
   }
@@ -74,8 +79,9 @@ export async function downloadAndStore(imageUrl: string): Promise<string> {
   // 3. 上传到 R2
   try {
     const r2 = getR2Client()
+    const bucket = process.env.R2_BUCKET!.trim()
     const command = new PutObjectCommand({
-      Bucket: process.env.R2_BUCKET,
+      Bucket: bucket,
       Key: key,
       Body: Buffer.from(buffer),
       ContentType: contentType,
@@ -88,7 +94,7 @@ export async function downloadAndStore(imageUrl: string): Promise<string> {
   }
 
   // 4. 返回永久 URL
-  const publicUrl = `${process.env.R2_PUBLIC_URL}/${key}`
+  const publicUrl = `${process.env.R2_PUBLIC_URL!.trim()}/${key}`
   console.log('downloadAndStore: Returning URL:', publicUrl)
   return publicUrl
 }
@@ -96,8 +102,9 @@ export async function downloadAndStore(imageUrl: string): Promise<string> {
 // 删除文件
 export async function deleteFile(key: string): Promise<void> {
   const r2 = getR2Client()
+  const bucket = process.env.R2_BUCKET!.trim()
   const command = new DeleteObjectCommand({
-    Bucket: process.env.R2_BUCKET,
+    Bucket: bucket,
     Key: key,
   })
 
@@ -106,7 +113,7 @@ export async function deleteFile(key: string): Promise<void> {
 
 // 从 URL 提取 key
 export function extractKeyFromUrl(url: string): string | null {
-  const publicUrl = process.env.R2_PUBLIC_URL
+  const publicUrl = process.env.R2_PUBLIC_URL?.trim()
   if (!publicUrl || !url.startsWith(publicUrl)) {
     return null
   }
