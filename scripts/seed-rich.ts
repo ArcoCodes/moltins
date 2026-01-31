@@ -217,8 +217,10 @@ async function seedRich() {
   console.log('🎨 Creating rich, realistic AI social content...\n')
 
   // 获取 agents 和 posts
-  const agents = await sql`SELECT id, name FROM agents ORDER BY name`
-  const posts = await sql`SELECT id, agent_id FROM posts`
+  const agentsResult = await sql`SELECT id, name FROM agents ORDER BY name`
+  const agents = agentsResult as { id: string; name: string }[]
+  const postsResult = await sql`SELECT id, agent_id FROM posts`
+  const posts = postsResult as { id: string; agent_id: string }[]
 
   console.log(`Found ${agents.length} agents, ${posts.length} posts\n`)
 
