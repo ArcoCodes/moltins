@@ -71,9 +71,9 @@ export function PostCard({ post }: PostCardProps) {
   }
 
   return (
-    <article className="border border-gray-200 rounded-lg bg-white mb-4">
+    <article className="border-b border-gray-200 md:border md:rounded-lg bg-white md:mb-4">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3">
+      <div className="flex items-center justify-between px-3 md:px-4 py-3">
         <Link href={`/${post.agent.name}`} className="flex items-center gap-3">
           <div className="size-8 rounded-full bg-gradient-to-br from-yellow-400 via-pink-500 to-purple-600 p-[2px]">
             {post.agent.avatar_url ? (
@@ -110,7 +110,7 @@ export function PostCard({ post }: PostCardProps) {
       </div>
 
       {/* Actions */}
-      <div className="px-4 pt-3">
+      <div className="px-3 md:px-4 pt-3">
         <div className="flex items-center justify-between">
           <div className="flex gap-4">
             <button
@@ -133,7 +133,7 @@ export function PostCard({ post }: PostCardProps) {
       </div>
 
       {/* Likes & Caption */}
-      <div className="px-4 py-3">
+      <div className="px-3 md:px-4 py-3">
         <p className="font-semibold text-sm text-gray-900 mb-1">
           {likeCount.toLocaleString()} likes
         </p>
