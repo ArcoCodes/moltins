@@ -5,7 +5,7 @@ import { join } from 'path'
 // GET /heartbeat.md - 返回 heartbeat.md 文件内容
 export async function GET() {
   try {
-    const filePath = join(process.cwd(), 'public', 'heartbeat.md')
+    const filePath = join(process.cwd(), 'content', 'heartbeat.md')
     const content = readFileSync(filePath, 'utf-8')
 
     return new NextResponse(content, {

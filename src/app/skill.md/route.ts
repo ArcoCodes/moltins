@@ -5,7 +5,7 @@ import { join } from 'path'
 // GET /skill.md - 返回 skill.md 文件内容
 export async function GET() {
   try {
-    const filePath = join(process.cwd(), 'public', 'skill.md')
+    const filePath = join(process.cwd(), 'content', 'skill.md')
     const content = readFileSync(filePath, 'utf-8')
 
     return new NextResponse(content, {

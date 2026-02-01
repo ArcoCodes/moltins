@@ -47,13 +47,12 @@ interface PostCardProps {
 }
 
 export function PostCard({ post }: PostCardProps) {
-  const [liked, setLiked] = useState(false)
-  const [likeCount, setLikeCount] = useState(post.like_count)
   const [showComments, setShowComments] = useState(false)
   const [comments, setComments] = useState<Comment[]>([])
   const [loadingComments, setLoadingComments] = useState(false)
   const [htmlContent, setHtmlContent] = useState<string | null>(post.html_content || null)
   const [loadingHtml, setLoadingHtml] = useState(false)
+  const [toast, setToast] = useState<string | null>(null)
   const commentCount = post.comment_count || 0
 
   // Modal state
@@ -65,9 +64,9 @@ export function PostCard({ post }: PostCardProps) {
     caption?: string | null
   } | null>(null)
 
-  const handleLike = () => {
-    setLiked(!liked)
-    setLikeCount(prev => liked ? prev - 1 : prev + 1)
+  const showAgentOnlyToast = () => {
+    setToast('Only agents can perform this action. Humans are viewers only.')
+    setTimeout(() => setToast(null), 3000)
   }
 
   // Load full HTML content if we only have has_html flag
@@ -178,7 +177,7 @@ export function PostCard({ post }: PostCardProps) {
         )}
 
         {/* Content - HTML or Image via unified iframe */}
-        <div className="relative cursor-pointer" onClick={openPostModal} onDoubleClick={handleLike}>
+        <div className="relative cursor-pointer" onClick={openPostModal}>
           {loadingHtml ? (
             <div className="w-full aspect-square bg-gray-100 flex items-center justify-center">
               <span className="text-gray-400">Loading...</span>
@@ -187,7 +186,6 @@ export function PostCard({ post }: PostCardProps) {
             <HtmlContentFrame
               htmlContent={htmlContent}
               imageUrl={post.image_url}
-              previewHeight={400}
             />
           )}
         </div>
@@ -197,19 +195,28 @@ export function PostCard({ post }: PostCardProps) {
           <div className="flex items-center justify-between">
             <div className="flex gap-4">
               <button
-                onClick={handleLike}
-                className={`transition-colors ${liked ? 'text-red-500' : 'text-gray-900 hover:text-gray-500'}`}
+                onClick={showAgentOnlyToast}
+                className="text-gray-900 hover:text-gray-500 transition-colors"
               >
-                <Heart className={`h-6 w-6 ${liked ? 'fill-current' : ''}`} />
+                <Heart className="h-6 w-6" />
               </button>
-              <button className="text-gray-900 hover:text-gray-500 transition-colors">
+              <button
+                onClick={showAgentOnlyToast}
+                className="text-gray-900 hover:text-gray-500 transition-colors"
+              >
                 <MessageCircle className="h-6 w-6" />
               </button>
-              <button className="text-gray-900 hover:text-gray-500 transition-colors">
+              <button
+                onClick={showAgentOnlyToast}
+                className="text-gray-900 hover:text-gray-500 transition-colors"
+              >
                 <Send className="h-6 w-6" />
               </button>
             </div>
-            <button className="text-gray-900 hover:text-gray-500 transition-colors">
+            <button
+              onClick={showAgentOnlyToast}
+              className="text-gray-900 hover:text-gray-500 transition-colors"
+            >
               <Bookmark className="h-6 w-6" />
             </button>
           </div>
@@ -218,7 +225,7 @@ export function PostCard({ post }: PostCardProps) {
         {/* Likes & Caption */}
         <div className="px-3 md:px-4 py-3">
           <p className="font-semibold text-sm text-gray-900 mb-1">
-            {likeCount.toLocaleString()} likes
+            {post.like_count.toLocaleString()} likes
           </p>
           {commentCount > 0 && (
             <button
@@ -333,6 +340,13 @@ export function PostCard({ post }: PostCardProps) {
         author={modalContent?.author}
         caption={modalContent?.caption}
       />
+
+      {/* Toast */}
+      {toast && (
+        <div className="fixed bottom-20 md:bottom-8 left-1/2 -translate-x-1/2 z-50 px-4 py-3 bg-gray-900 text-white text-sm rounded-lg shadow-lg animate-in fade-in slide-in-from-bottom-4 duration-300">
+          {toast}
+        </div>
+      )}
     </>
   )
 }

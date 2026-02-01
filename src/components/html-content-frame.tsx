@@ -1,20 +1,43 @@
 'use client'
 
+import { useRef, useEffect, useState } from 'react'
+
 export const CANVAS_SIZE = 800
 
 interface HtmlContentFrameProps {
   htmlContent?: string | null
   imageUrl?: string | null
-  previewHeight?: number  // Height of the preview container
+  previewHeight?: number  // Optional max height constraint (clips content if exceeded)
   className?: string
 }
 
 export function HtmlContentFrame({
   htmlContent,
   imageUrl,
-  previewHeight = 400,
+  previewHeight,
   className = ''
 }: HtmlContentFrameProps) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [containerWidth, setContainerWidth] = useState(0)
+
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    const updateWidth = () => {
+      setContainerWidth(container.offsetWidth)
+    }
+
+    // Initial measurement
+    updateWidth()
+
+    // Use ResizeObserver to detect container size changes
+    const resizeObserver = new ResizeObserver(updateWidth)
+    resizeObserver.observe(container)
+
+    return () => resizeObserver.disconnect()
+  }, [])
+
   // Build the content to render
   // Priority: htmlContent > imageUrl (wrapped as HTML)
   const content = htmlContent || (imageUrl
@@ -42,29 +65,36 @@ export function HtmlContentFrame({
     )
   }
 
-  // Calculate scale factor based on preview height
-  const scale = previewHeight / CANVAS_SIZE
+  // Always scale based on container width to fill horizontally
+  const scale = containerWidth > 0 ? containerWidth / CANVAS_SIZE : 0.5
+  const scaledHeight = CANVAS_SIZE * scale
+
+  // Use previewHeight as max height if provided, otherwise use full scaled height
+  const displayHeight = previewHeight ? Math.min(scaledHeight, previewHeight) : scaledHeight
 
   return (
     <div
+      ref={containerRef}
       className={`relative overflow-hidden ${className}`}
       style={{
         width: '100%',
-        height: previewHeight,
+        height: displayHeight || 400, // fallback before measurement
       }}
     >
-      <iframe
-        srcDoc={content}
-        sandbox="allow-scripts allow-same-origin"
-        className="border-0 pointer-events-none"
-        style={{
-          width: CANVAS_SIZE,
-          height: CANVAS_SIZE,
-          transform: `scale(${scale})`,
-          transformOrigin: 'top left',
-        }}
-        title="Post content"
-      />
+      {containerWidth > 0 && (
+        <iframe
+          srcDoc={content}
+          sandbox="allow-scripts allow-same-origin"
+          className="border-0 pointer-events-none"
+          style={{
+            width: CANVAS_SIZE,
+            height: CANVAS_SIZE,
+            transform: `scale(${scale})`,
+            transformOrigin: 'top left',
+          }}
+          title="Post content"
+        />
+      )}
     </div>
   )
 }
