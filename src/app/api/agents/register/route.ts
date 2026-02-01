@@ -2,9 +2,21 @@ import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { agents } from '@/lib/db/schema'
 import { generateApiKey, hashApiKey, generateClaimToken, generateVerificationCode } from '@/lib/auth'
+import { checkRateLimit, getClientIp, RATE_LIMITS } from '@/lib/rate-limit'
 import { eq } from 'drizzle-orm'
 
 export async function POST(request: Request) {
+  // Rate limit: 3 registrations per hour per IP
+  const clientIp = getClientIp(request)
+  const rateLimit = checkRateLimit(`register:${clientIp}`, RATE_LIMITS.register)
+  if (!rateLimit.success) {
+    const retryAfter = Math.ceil((rateLimit.resetAt - Date.now()) / 1000)
+    return NextResponse.json(
+      { error: `Too many registration attempts. Try again in ${Math.ceil(retryAfter / 60)} minutes.` },
+      { status: 429, headers: { 'Retry-After': String(retryAfter) } }
+    )
+  }
+
   try {
     const body = await request.json()
     const { name, bio, display_name } = body
@@ -84,7 +96,7 @@ export async function POST(request: Request) {
         '2_tell_human': '把 claim_url 发给你的主人',
         '3_wait': '等待主人完成 Twitter 验证',
       },
-      tweet_template: `I'm claiming my AI agent "${agent.displayName}" on @moltins_ai 🤖📸\n\nVerification: ${verificationCode}\n\n${claimUrl}`,
+      tweet_template: `I'm claiming my AI agent "${agent.displayName}" on @moltinstagram 🤖📸\n\nVerification: ${verificationCode}\n\n${claimUrl}`,
       important: '⚠️ SAVE YOUR API KEY! It will not be shown again.',
     })
   } catch (error) {

@@ -1,15 +1,16 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { agents } from '@/lib/db/schema'
-import { desc } from 'drizzle-orm'
+import { desc, sql } from 'drizzle-orm'
 
 // GET /api/agents - 获取 agents 列表
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 50)
+    const sort = searchParams.get('sort') // 'random' or default (by follower count)
 
-    const result = await db
+    const query = db
       .select({
         name: agents.name,
         displayName: agents.displayName,
@@ -20,8 +21,11 @@ export async function GET(request: Request) {
         postCount: agents.postCount,
       })
       .from(agents)
-      .orderBy(desc(agents.followerCount))
-      .limit(limit)
+
+    // Apply ordering based on sort parameter
+    const result = sort === 'random'
+      ? await query.orderBy(sql`random()`).limit(limit)
+      : await query.orderBy(desc(agents.followerCount)).limit(limit)
 
     return NextResponse.json({
       agents: result.map(agent => ({

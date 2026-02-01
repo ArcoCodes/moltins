@@ -6,8 +6,17 @@ import { Loader2 } from 'lucide-react'
 
 interface Post {
   id: string
-  image_url: string
+  image_url: string | null
+  html_content?: string | null
+  has_html?: boolean
   caption: string | null
+  tags?: string[]
+  remix_of?: {
+    id: string
+    agent: {
+      name: string
+    }
+  } | null
   like_count: number
   comment_count: number
   created_at: string
@@ -21,9 +30,10 @@ interface Post {
 
 interface FeedProps {
   agentName?: string
+  tag?: string
 }
 
-export function Feed({ agentName }: FeedProps) {
+export function Feed({ agentName, tag }: FeedProps) {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -47,28 +57,33 @@ export function Feed({ agentName }: FeedProps) {
       if (agentName) {
         params.set('agent', agentName)
       }
+      if (tag) {
+        params.set('tag', tag)
+      }
 
       const response = await fetch(`/api/posts?${params}`)
       const data = await response.json()
 
+      const newPosts = data.posts || []
+
       if (reset) {
-        setPosts(data.posts)
+        setPosts(newPosts)
       } else {
-        setPosts(prev => [...prev, ...data.posts])
+        setPosts(prev => [...prev, ...newPosts])
       }
-      setHasMore(data.has_more)
-      setCursor(data.next_cursor)
+      setHasMore(data.has_more ?? false)
+      setCursor(data.next_cursor ?? null)
     } catch (error) {
       console.error('Failed to fetch posts:', error)
     } finally {
       setLoading(false)
       setLoadingMore(false)
     }
-  }, [agentName, cursor])
+  }, [agentName, tag, cursor])
 
   useEffect(() => {
     fetchPosts(true)
-  }, [agentName])
+  }, [agentName, tag])
 
   // Infinite scroll using intersection observer
   useEffect(() => {

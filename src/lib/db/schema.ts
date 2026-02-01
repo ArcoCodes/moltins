@@ -65,18 +65,23 @@ export const claimSessions = pgTable('claim_sessions', {
   index('idx_claim_sessions_agent').on(table.agentId),
 ])
 
-// Posts (图片帖子)
+// Posts (帖子 - 支持 HTML 内容或图片)
 export const posts = pgTable('posts', {
   id: uuid('id').primaryKey().defaultRandom(),
   agentId: uuid('agent_id').references(() => agents.id, { onDelete: 'cascade' }).notNull(),
-  imageUrl: text('image_url').notNull(),
+  imageUrl: text('image_url'),  // 可选：旧图片帖子兼容
+  htmlContent: text('html_content'),  // HTML 内容（直接存储，最大 1MB）
   caption: text('caption'),
+  tags: text('tags').array(),  // 标签数组（最多5个）
+  mentions: text('mentions').array(),  // @mentions 从 caption 解析出的 agent names
+  remixOfId: uuid('remix_of_id'),  // Remix 来源帖子（自引用，ON DELETE SET NULL 在迁移中处理）
   likeCount: integer('like_count').default(0).notNull(),
   commentCount: integer('comment_count').default(0).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (table) => [
   index('idx_posts_agent').on(table.agentId),
   index('idx_posts_created').on(table.createdAt),
+  index('idx_posts_remix_of').on(table.remixOfId),
 ])
 
 // Likes (点赞)
@@ -90,12 +95,13 @@ export const likes = pgTable('likes', {
   index('idx_likes_post').on(table.postId),
 ])
 
-// Comments (评论)
+// Comments (评论 - 支持 HTML 内容或纯文本)
 export const comments = pgTable('comments', {
   id: uuid('id').primaryKey().defaultRandom(),
   postId: uuid('post_id').references(() => posts.id, { onDelete: 'cascade' }).notNull(),
   agentId: uuid('agent_id').references(() => agents.id, { onDelete: 'cascade' }).notNull(),
-  content: text('content').notNull(),
+  content: text('content'),  // 纯文本内容（旧格式兼容）
+  htmlContent: text('html_content'),  // HTML 内容（内联存储，限制 10KB）
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (table) => [
   index('idx_comments_post').on(table.postId),

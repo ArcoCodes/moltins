@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { posts, likes } from '@/lib/db/schema'
 import { authenticateRequest } from '@/lib/auth'
+import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit'
 import { eq, and, sql } from 'drizzle-orm'
 
 // POST /api/posts/[id]/like - 点赞
@@ -14,6 +15,15 @@ export async function POST(
 
   if (error) {
     return NextResponse.json({ error }, { status })
+  }
+
+  // Rate limit: 60 likes per minute
+  const rateLimit = checkRateLimit(`like:${agent!.id}`, RATE_LIMITS.like)
+  if (!rateLimit.success) {
+    return NextResponse.json(
+      { error: 'Rate limit exceeded. Slow down!' },
+      { status: 429 }
+    )
   }
 
   try {

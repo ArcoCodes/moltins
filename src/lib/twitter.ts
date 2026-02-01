@@ -1,111 +1,69 @@
-import { randomBytes, createHash } from 'crypto'
+// 第三方 Twitter API 配置 (twitterapi.io)
+const TWITTER_API_BASE = 'https://api.twitterapi.io'
+const TWITTER_API_KEY = process.env.TWITTER_API_KEY!
 
-// Twitter OAuth 2.0 配置
-const config = {
-  clientId: process.env.TWITTER_CLIENT_ID!,
-  clientSecret: process.env.TWITTER_CLIENT_SECRET!,
-  callbackUrl: process.env.TWITTER_CALLBACK_URL || 'https://moltins.com/api/claim/callback',
-  scopes: ['tweet.read', 'users.read', 'offline.access'],
+// 从推文 URL 中提取推文 ID
+export function extractTweetId(url: string): string | null {
+  // 支持多种 Twitter URL 格式:
+  // https://twitter.com/username/status/1234567890
+  // https://x.com/username/status/1234567890
+  // https://twitter.com/username/status/1234567890?s=20
+  const pattern = /(?:twitter\.com|x\.com)\/\w+\/status\/(\d+)/
+
+  const match = url.match(pattern)
+  if (match) {
+    return match[1]
+  }
+  return null
 }
 
-// 生成 PKCE code verifier 和 challenge
-export function generatePKCE() {
-  const codeVerifier = randomBytes(32).toString('base64url')
-  const codeChallenge = createHash('sha256')
-    .update(codeVerifier)
-    .digest('base64url')
+// 通过推文 ID 获取推文信息（使用第三方 twitterapi.io）
+export async function getTweetById(tweetId: string) {
+  const response = await fetch(
+    `${TWITTER_API_BASE}/twitter/tweets?tweet_ids=${tweetId}`,
+    {
+      headers: {
+        'X-API-Key': TWITTER_API_KEY,
+      },
+    }
+  )
 
-  return { codeVerifier, codeChallenge }
-}
+  if (!response.ok) {
+    const error = await response.text()
+    throw new Error(`Failed to get tweet: ${error}`)
+  }
 
-// 生成 OAuth state
-export function generateOAuthState() {
-  return randomBytes(16).toString('hex')
-}
+  const data = await response.json()
 
-// 生成 Twitter OAuth URL
-export function generateTwitterAuthUrl(claimToken: string, state: string, codeChallenge: string) {
-  const params = new URLSearchParams({
-    response_type: 'code',
-    client_id: config.clientId,
-    redirect_uri: config.callbackUrl,
-    scope: config.scopes.join(' '),
-    state: `${state}:${claimToken}`, // state 中携带 claim_token
-    code_challenge: codeChallenge,
-    code_challenge_method: 'S256',
-  })
+  if (data.status !== 'success' || !data.tweets || data.tweets.length === 0) {
+    throw new Error('Tweet not found')
+  }
 
-  return `https://twitter.com/i/oauth2/authorize?${params}`
-}
+  // 转换为统一格式
+  const tweet = data.tweets[0]
 
-// 用 code 换取 access token
-export async function exchangeCodeForToken(code: string, codeVerifier: string) {
-  const response = await fetch('https://api.twitter.com/2/oauth2/token', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      Authorization: `Basic ${Buffer.from(`${config.clientId}:${config.clientSecret}`).toString('base64')}`,
+  // 检查推文是否有实际内容（空推文表示不存在或已删除）
+  if (!tweet.id || tweet.id === '') {
+    throw new Error('Tweet not found or deleted')
+  }
+
+  return {
+    data: {
+      id: tweet.id,
+      text: tweet.text,
+      created_at: tweet.createdAt,
+      author_id: tweet.author?.id,
     },
-    body: new URLSearchParams({
-      code,
-      grant_type: 'authorization_code',
-      redirect_uri: config.callbackUrl,
-      code_verifier: codeVerifier,
-    }),
-  })
-
-  if (!response.ok) {
-    const error = await response.text()
-    throw new Error(`Failed to exchange code: ${error}`)
+    includes: {
+      users: tweet.author && tweet.author.id ? [{
+        id: tweet.author.id,
+        username: tweet.author.userName,
+        name: tweet.author.name,
+        profile_image_url: tweet.author.profilePicture,
+        public_metrics: {
+          followers_count: tweet.author.followers || 0,
+        },
+      }] : [],
+    },
   }
-
-  return response.json()
-}
-
-// 获取 Twitter 用户信息
-export async function getTwitterUser(accessToken: string) {
-  const response = await fetch(
-    'https://api.twitter.com/2/users/me?user.fields=profile_image_url,public_metrics,description',
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    }
-  )
-
-  if (!response.ok) {
-    const error = await response.text()
-    throw new Error(`Failed to get user: ${error}`)
-  }
-
-  const data = await response.json()
-  return data.data
-}
-
-// 获取用户最近的推文
-export async function getUserRecentTweets(accessToken: string, userId: string) {
-  const response = await fetch(
-    `https://api.twitter.com/2/users/${userId}/tweets?max_results=10&tweet.fields=created_at,text`,
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    }
-  )
-
-  if (!response.ok) {
-    const error = await response.text()
-    throw new Error(`Failed to get tweets: ${error}`)
-  }
-
-  const data = await response.json()
-  return data.data || []
-}
-
-// 验证推文中是否包含验证码
-export function findVerificationTweet(tweets: any[], verificationCode: string) {
-  return tweets.find((tweet: any) => {
-    const text = tweet.text.toLowerCase()
-    return text.includes(verificationCode.toLowerCase())
-  })
 }
