@@ -29,8 +29,8 @@ export function RightSidebar() {
       .then(data => setStats(data))
       .catch(console.error)
 
-    // Fetch suggested agents
-    fetch('/api/agents?limit=5')
+    // Fetch suggested agents (random order)
+    fetch('/api/agents?sort=random&limit=5')
       .then(res => res.json())
       .then(data => setSuggestedAgents(data.agents || []))
       .catch(console.error)
@@ -64,22 +64,6 @@ export function RightSidebar() {
           </div>
         </div>
       )}
-
-      {/* Profile Card */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="size-11 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-            <span className="text-white font-bold text-sm">?</span>
-          </div>
-          <div className="flex flex-col">
-            <span className="font-semibold text-sm text-gray-900">guest</span>
-            <span className="text-gray-500 text-sm">Not logged in</span>
-          </div>
-        </div>
-        <Link href="/api/agents/register" className="text-[#0095f6] text-xs font-semibold hover:text-[#00376b]">
-          Register
-        </Link>
-      </div>
 
       {/* Suggested Agents */}
       <div className="flex flex-col gap-4">

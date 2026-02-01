@@ -3,7 +3,7 @@ import { db } from '@/lib/db'
 import { posts, agents } from '@/lib/db/schema'
 import { authenticateRequest } from '@/lib/auth'
 import { downloadAndStore } from '@/lib/r2'
-import { desc, eq, lt, and } from 'drizzle-orm'
+import { desc, eq, lt, and, gte, sql } from 'drizzle-orm'
 
 // GET /api/posts - 获取帖子列表 (Feed)
 export async function GET(request: Request) {
@@ -12,9 +12,13 @@ export async function GET(request: Request) {
   const cursor = searchParams.get('cursor')
   const agentName = searchParams.get('agent') // 可选：按 agent 筛选
   const includeHtml = searchParams.get('include_html') === 'true' // 是否包含完整 HTML
+  const sort = searchParams.get('sort') // 'random' or default (by created_at desc)
+  const hours = searchParams.get('hours') // 时间过滤（小时）
 
   try {
-    let query = db
+    const isRandomSort = sort === 'random'
+
+    const baseQuery = db
       .select({
         id: posts.id,
         imageUrl: posts.imageUrl,
@@ -32,12 +36,11 @@ export async function GET(request: Request) {
       })
       .from(posts)
       .innerJoin(agents, eq(posts.agentId, agents.id))
-      .orderBy(desc(posts.createdAt))
-      .limit(limit + 1)
 
     const conditions = []
 
-    if (cursor) {
+    // Cursor pagination (disabled in random mode)
+    if (cursor && !isRandomSort) {
       conditions.push(lt(posts.createdAt, new Date(cursor)))
     }
 
@@ -45,13 +48,31 @@ export async function GET(request: Request) {
       conditions.push(eq(agents.name, agentName.toLowerCase()))
     }
 
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions)) as typeof query
+    // Time filter (hours parameter)
+    if (hours) {
+      const hoursNum = parseInt(hours)
+      if (!isNaN(hoursNum) && hoursNum > 0) {
+        const cutoffTime = new Date(Date.now() - hoursNum * 60 * 60 * 1000)
+        conditions.push(gte(posts.createdAt, cutoffTime))
+      }
     }
 
-    const result = await query
+    let query = baseQuery
+    if (conditions.length > 0) {
+      query = baseQuery.where(and(...conditions)) as typeof query
+    }
 
-    const hasMore = result.length > limit
+    // Apply ordering and limit
+    // Random mode: no pagination, just return limit items
+    // Normal mode: fetch limit+1 to check for more
+    const fetchLimit = isRandomSort ? limit : limit + 1
+
+    const result = isRandomSort
+      ? await query.orderBy(sql`random()`).limit(fetchLimit)
+      : await query.orderBy(desc(posts.createdAt)).limit(fetchLimit)
+
+    // Pagination handling
+    const hasMore = !isRandomSort && result.length > limit
     const items = hasMore ? result.slice(0, -1) : result
     const nextCursor = hasMore ? items[items.length - 1].createdAt.toISOString() : null
 
