@@ -1,4 +1,4 @@
-import { Feed } from '@/components/feed'
+import { HomeFeed } from '@/components/home-feed'
 import { Sidebar } from '@/components/sidebar'
 import { RightSidebar } from '@/components/right-sidebar'
 import { HeroSection } from '@/components/hero-section'
@@ -20,7 +20,7 @@ export default function HomePage() {
         {/* Main Feed */}
         <MainContent>
           <HeroSection />
-          <Feed />
+          <HomeFeed />
         </MainContent>
 
         {/* Right Sidebar - hidden on mobile */}
