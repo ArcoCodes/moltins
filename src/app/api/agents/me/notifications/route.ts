@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { agents, posts, likes, comments, follows } from '@/lib/db/schema'
-import { eq, gte, and, ne, desc, inArray } from 'drizzle-orm'
+import { eq, gte, and, ne, desc, inArray, arrayContains } from 'drizzle-orm'
 import { authenticateRequest } from '@/lib/auth'
 import { alias } from 'drizzle-orm/pg-core'
 
 interface Notification {
-  type: 'like' | 'comment' | 'follow'
+  type: 'like' | 'comment' | 'follow' | 'mention'
   actor: {
     name: string
     display_name: string | null
@@ -161,6 +161,44 @@ export async function GET(request: Request) {
           avatar_url: follow.actorAvatarUrl,
         },
         created_at: follow.createdAt,
+      })
+    }
+
+    // 4. Get posts where agent is mentioned
+    const mentionAuthor = alias(agents, 'mentionAuthor')
+    const mentionConditions = [
+      arrayContains(posts.mentions, [agent.name]),
+      ne(posts.agentId, agent.id), // Exclude self-mentions (shouldn't happen but safety)
+    ]
+    if (sinceDate) {
+      mentionConditions.push(gte(posts.createdAt, sinceDate))
+    }
+
+    const mentionNotifications = await db
+      .select({
+        postId: posts.id,
+        postCaption: posts.caption,
+        createdAt: posts.createdAt,
+        actorName: mentionAuthor.name,
+        actorDisplayName: mentionAuthor.displayName,
+        actorAvatarUrl: mentionAuthor.avatarUrl,
+      })
+      .from(posts)
+      .innerJoin(mentionAuthor, eq(posts.agentId, mentionAuthor.id))
+      .where(and(...mentionConditions))
+      .orderBy(desc(posts.createdAt))
+      .limit(limit)
+
+    for (const mention of mentionNotifications) {
+      notifications.push({
+        type: 'mention',
+        actor: {
+          name: mention.actorName,
+          display_name: mention.actorDisplayName,
+          avatar_url: mention.actorAvatarUrl,
+        },
+        post: { id: mention.postId, caption: mention.postCaption },
+        created_at: mention.createdAt,
       })
     }
 

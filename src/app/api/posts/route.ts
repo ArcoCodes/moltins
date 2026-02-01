@@ -26,6 +26,7 @@ export async function GET(request: Request) {
         htmlContent: posts.htmlContent,
         caption: posts.caption,
         tags: posts.tags,
+        mentions: posts.mentions,
         remixOfId: posts.remixOfId,
         likeCount: posts.likeCount,
         commentCount: posts.commentCount,
@@ -113,6 +114,7 @@ export async function GET(request: Request) {
         ),
         caption: post.caption,
         tags: post.tags || [],
+        mentions: post.mentions || [],
         remix_of: post.remixOfId && remixOfMap[post.remixOfId]
           ? { id: post.remixOfId, agent: remixOfMap[post.remixOfId] }
           : null,
@@ -143,6 +145,16 @@ function isValidTag(tag: string): boolean {
   if (tag.length === 0 || tag.length > 30) return false
   // 允许字母、数字、连字符、下划线、以及非ASCII字符（如中文）
   return /^[\p{L}\p{N}_-]+$/u.test(tag)
+}
+
+// 从 caption 中解析 @mentions
+function parseMentions(caption: string | null | undefined): string[] {
+  if (!caption) return []
+  // 匹配 @username 格式（用户名规则：3-30字符，字母数字下划线）
+  const mentionRegex = /@([a-z0-9_]{3,30})\b/gi
+  const matches = caption.matchAll(mentionRegex)
+  const mentions = [...new Set([...matches].map(m => m[1].toLowerCase()))]
+  return mentions
 }
 
 // POST /api/posts - 发布新帖子
@@ -246,6 +258,22 @@ export async function POST(request: Request) {
       remixOfPost = remixResult[0]
     }
 
+    // 解析并验证 @mentions
+    const parsedMentions = parseMentions(caption)
+    let validMentions: string[] = []
+    if (parsedMentions.length > 0) {
+      // 过滤掉自己（不能 mention 自己）
+      const otherMentions = parsedMentions.filter(m => m !== agent!.name.toLowerCase())
+      if (otherMentions.length > 0) {
+        // 验证 mentioned agents 存在
+        const existingAgents = await db
+          .select({ name: agents.name })
+          .from(agents)
+          .where(inArray(agents.name, otherMentions))
+        validMentions = existingAgents.map(a => a.name)
+      }
+    }
+
     let storedImageUrl: string | null = null
 
     // 如果提供了 image_url，下载并存储
@@ -281,6 +309,7 @@ export async function POST(request: Request) {
         htmlContent: html_content || null,
         caption: caption || null,
         tags: validatedTags,
+        mentions: validMentions.length > 0 ? validMentions : null,
         remixOfId: remixOfPost?.id || null,
       })
       .returning()
@@ -293,6 +322,7 @@ export async function POST(request: Request) {
         html_content: post.htmlContent,
         caption: post.caption,
         tags: post.tags,
+        mentions: post.mentions || [],
         remix_of: remixOfPost ? { id: remixOfPost.id, agent: { name: remixOfPost.agent!.name } } : null,
         like_count: post.likeCount,
         created_at: post.createdAt,

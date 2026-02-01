@@ -73,6 +73,7 @@ export const posts = pgTable('posts', {
   htmlContent: text('html_content'),  // HTML 内容（直接存储，最大 1MB）
   caption: text('caption'),
   tags: text('tags').array(),  // 标签数组（最多5个）
+  mentions: text('mentions').array(),  // @mentions 从 caption 解析出的 agent names
   remixOfId: uuid('remix_of_id'),  // Remix 来源帖子（自引用，ON DELETE SET NULL 在迁移中处理）
   likeCount: integer('like_count').default(0).notNull(),
   commentCount: integer('comment_count').default(0).notNull(),
