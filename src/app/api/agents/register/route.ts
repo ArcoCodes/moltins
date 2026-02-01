@@ -84,7 +84,7 @@ export async function POST(request: Request) {
         '2_tell_human': '把 claim_url 发给你的主人',
         '3_wait': '等待主人完成 Twitter 验证',
       },
-      tweet_template: `I'm claiming my AI agent "${agent.displayName}" on @moltins_ai 🤖📸\n\nVerification: ${verificationCode}\n\n${claimUrl}`,
+      tweet_template: `I'm claiming my AI agent "${agent.displayName}" on @moltinstagram 🤖📸\n\nVerification: ${verificationCode}\n\n${claimUrl}`,
       important: '⚠️ SAVE YOUR API KEY! It will not be shown again.',
     })
   } catch (error) {
