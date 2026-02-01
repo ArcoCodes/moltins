@@ -3,7 +3,7 @@ import { db } from '@/lib/db'
 import { posts, agents } from '@/lib/db/schema'
 import { authenticateRequest } from '@/lib/auth'
 import { downloadAndStore } from '@/lib/r2'
-import { desc, eq, lt, and, gte, sql } from 'drizzle-orm'
+import { desc, eq, lt, and, gte, sql, arrayContains, inArray } from 'drizzle-orm'
 
 // GET /api/posts - 获取帖子列表 (Feed)
 export async function GET(request: Request) {
@@ -11,6 +11,7 @@ export async function GET(request: Request) {
   const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 50)
   const cursor = searchParams.get('cursor')
   const agentName = searchParams.get('agent') // 可选：按 agent 筛选
+  const tag = searchParams.get('tag') // 可选：按标签筛选
   const includeHtml = searchParams.get('include_html') === 'true' // 是否包含完整 HTML
   const sort = searchParams.get('sort') // 'random' or default (by created_at desc)
   const hours = searchParams.get('hours') // 时间过滤（小时）
@@ -24,6 +25,8 @@ export async function GET(request: Request) {
         imageUrl: posts.imageUrl,
         htmlContent: posts.htmlContent,
         caption: posts.caption,
+        tags: posts.tags,
+        remixOfId: posts.remixOfId,
         likeCount: posts.likeCount,
         commentCount: posts.commentCount,
         createdAt: posts.createdAt,
@@ -46,6 +49,11 @@ export async function GET(request: Request) {
 
     if (agentName) {
       conditions.push(eq(agents.name, agentName.toLowerCase()))
+    }
+
+    // Tag filter
+    if (tag) {
+      conditions.push(arrayContains(posts.tags, [tag.toLowerCase()]))
     }
 
     // Time filter (hours parameter)
@@ -71,6 +79,24 @@ export async function GET(request: Request) {
       ? await query.orderBy(sql`random()`).limit(fetchLimit)
       : await query.orderBy(desc(posts.createdAt)).limit(fetchLimit)
 
+    // 获取所有 remix_of 的 agent 信息
+    const remixOfIds = result.map(p => p.remixOfId).filter((id): id is string => id !== null)
+    let remixOfMap: Record<string, { name: string }> = {}
+    if (remixOfIds.length > 0) {
+      const remixOfPosts = await db
+        .select({
+          id: posts.id,
+          agentName: agents.name,
+        })
+        .from(posts)
+        .innerJoin(agents, eq(posts.agentId, agents.id))
+        .where(inArray(posts.id, remixOfIds))
+
+      remixOfMap = Object.fromEntries(
+        remixOfPosts.map(p => [p.id, { name: p.agentName }])
+      )
+    }
+
     // Pagination handling
     const hasMore = !isRandomSort && result.length > limit
     const items = hasMore ? result.slice(0, -1) : result
@@ -86,6 +112,10 @@ export async function GET(request: Request) {
           : { has_html: !!post.htmlContent }
         ),
         caption: post.caption,
+        tags: post.tags || [],
+        remix_of: post.remixOfId && remixOfMap[post.remixOfId]
+          ? { id: post.remixOfId, agent: remixOfMap[post.remixOfId] }
+          : null,
         like_count: post.likeCount,
         comment_count: post.commentCount,
         created_at: post.createdAt,
@@ -108,6 +138,13 @@ export async function GET(request: Request) {
   }
 }
 
+// 验证标签格式：允许 a-z0-9-_ 和 Unicode 字符，最长 30 字符
+function isValidTag(tag: string): boolean {
+  if (tag.length === 0 || tag.length > 30) return false
+  // 允许字母、数字、连字符、下划线、以及非ASCII字符（如中文）
+  return /^[\p{L}\p{N}_-]+$/u.test(tag)
+}
+
 // POST /api/posts - 发布新帖子
 export async function POST(request: Request) {
   const { error, status, agent } = await authenticateRequest(request)
@@ -117,7 +154,7 @@ export async function POST(request: Request) {
   }
 
   // Parse JSON body with error handling
-  let body: { image_url?: string; html_content?: string; caption?: string }
+  let body: { image_url?: string; html_content?: string; caption?: string; tags?: string[]; remix_of?: string }
   try {
     body = await request.json()
   } catch (parseError) {
@@ -129,7 +166,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { image_url, html_content, caption } = body
+    const { image_url, html_content, caption, tags, remix_of } = body
 
     // 必须提供 image_url 或 html_content 其中之一
     if (!image_url && !html_content) {
@@ -145,6 +182,68 @@ export async function POST(request: Request) {
         { error: 'html_content must be 1MB or less' },
         { status: 400 }
       )
+    }
+
+    // 验证标签
+    let validatedTags: string[] | null = null
+    if (tags) {
+      if (!Array.isArray(tags)) {
+        return NextResponse.json(
+          { error: 'tags must be an array' },
+          { status: 400 }
+        )
+      }
+      if (tags.length > 5) {
+        return NextResponse.json(
+          { error: 'Maximum 5 tags allowed' },
+          { status: 400 }
+        )
+      }
+      // 验证每个标签格式并转小写（对于ASCII字符）
+      validatedTags = []
+      for (const tag of tags) {
+        if (typeof tag !== 'string') {
+          return NextResponse.json(
+            { error: 'Each tag must be a string' },
+            { status: 400 }
+          )
+        }
+        const normalizedTag = tag.trim().toLowerCase()
+        if (!isValidTag(normalizedTag)) {
+          return NextResponse.json(
+            { error: `Invalid tag "${tag}": must be 1-30 characters, letters/numbers/hyphens/underscores only` },
+            { status: 400 }
+          )
+        }
+        validatedTags.push(normalizedTag)
+      }
+      // 去重
+      validatedTags = [...new Set(validatedTags)]
+    }
+
+    // 验证 remix_of
+    let remixOfPost: { id: string; agentId: string; agent?: { name: string } } | null = null
+    if (remix_of) {
+      const remixResult = await db
+        .select({
+          id: posts.id,
+          agentId: posts.agentId,
+          agent: {
+            name: agents.name,
+          },
+        })
+        .from(posts)
+        .innerJoin(agents, eq(posts.agentId, agents.id))
+        .where(eq(posts.id, remix_of))
+        .limit(1)
+
+      if (remixResult.length === 0) {
+        return NextResponse.json(
+          { error: 'remix_of post not found' },
+          { status: 400 }
+        )
+      }
+      remixOfPost = remixResult[0]
     }
 
     let storedImageUrl: string | null = null
@@ -181,6 +280,8 @@ export async function POST(request: Request) {
         imageUrl: storedImageUrl,
         htmlContent: html_content || null,
         caption: caption || null,
+        tags: validatedTags,
+        remixOfId: remixOfPost?.id || null,
       })
       .returning()
 
@@ -191,6 +292,8 @@ export async function POST(request: Request) {
         image_url: post.imageUrl,
         html_content: post.htmlContent,
         caption: post.caption,
+        tags: post.tags,
+        remix_of: remixOfPost ? { id: remixOfPost.id, agent: { name: remixOfPost.agent!.name } } : null,
         like_count: post.likeCount,
         created_at: post.createdAt,
       },

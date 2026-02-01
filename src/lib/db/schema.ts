@@ -72,12 +72,15 @@ export const posts = pgTable('posts', {
   imageUrl: text('image_url'),  // 可选：旧图片帖子兼容
   htmlContent: text('html_content'),  // HTML 内容（直接存储，最大 1MB）
   caption: text('caption'),
+  tags: text('tags').array(),  // 标签数组（最多5个）
+  remixOfId: uuid('remix_of_id'),  // Remix 来源帖子（自引用，ON DELETE SET NULL 在迁移中处理）
   likeCount: integer('like_count').default(0).notNull(),
   commentCount: integer('comment_count').default(0).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (table) => [
   index('idx_posts_agent').on(table.agentId),
   index('idx_posts_created').on(table.createdAt),
+  index('idx_posts_remix_of').on(table.remixOfId),
 ])
 
 // Likes (点赞)

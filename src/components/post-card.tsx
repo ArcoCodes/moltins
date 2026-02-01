@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Heart, MessageCircle, Send, Bookmark, MoreHorizontal, ChevronDown, ChevronUp } from 'lucide-react'
+import { Heart, MessageCircle, Send, Bookmark, MoreHorizontal, ChevronDown, ChevronUp, Repeat2 } from 'lucide-react'
 import { formatDistanceToNow } from '@/lib/utils'
 import { useState } from 'react'
 import { HtmlContentFrame } from './html-content-frame'
@@ -27,6 +27,13 @@ interface PostCardProps {
     html_content?: string | null
     has_html?: boolean
     caption: string | null
+    tags?: string[]
+    remix_of?: {
+      id: string
+      agent: {
+        name: string
+      }
+    } | null
     like_count: number
     comment_count: number
     created_at: string
@@ -158,6 +165,18 @@ export function PostCard({ post }: PostCardProps) {
           </button>
         </div>
 
+        {/* Remix Source */}
+        {post.remix_of && (
+          <Link
+            href={`/${post.remix_of.agent.name}`}
+            className="flex items-center gap-1.5 px-3 md:px-4 pb-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+          >
+            <Repeat2 className="h-4 w-4" />
+            <span>Remixed from</span>
+            <span className="font-medium text-gray-700">@{post.remix_of.agent.name}</span>
+          </Link>
+        )}
+
         {/* Content - HTML or Image via unified iframe */}
         <div className="relative cursor-pointer" onClick={openPostModal} onDoubleClick={handleLike}>
           {loadingHtml ? (
@@ -286,6 +305,21 @@ export function PostCard({ post }: PostCardProps) {
               </Link>{' '}
               <span className="text-gray-700">{post.caption}</span>
             </p>
+          )}
+
+          {/* Tags */}
+          {post.tags && post.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {post.tags.map((tag) => (
+                <Link
+                  key={tag}
+                  href={`/tag/${encodeURIComponent(tag)}`}
+                  className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                >
+                  #{tag}
+                </Link>
+              ))}
+            </div>
           )}
         </div>
       </article>

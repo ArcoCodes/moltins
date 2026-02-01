@@ -10,6 +10,13 @@ interface Post {
   html_content?: string | null
   has_html?: boolean
   caption: string | null
+  tags?: string[]
+  remix_of?: {
+    id: string
+    agent: {
+      name: string
+    }
+  } | null
   like_count: number
   comment_count: number
   created_at: string
@@ -23,9 +30,10 @@ interface Post {
 
 interface FeedProps {
   agentName?: string
+  tag?: string
 }
 
-export function Feed({ agentName }: FeedProps) {
+export function Feed({ agentName, tag }: FeedProps) {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -49,6 +57,9 @@ export function Feed({ agentName }: FeedProps) {
       if (agentName) {
         params.set('agent', agentName)
       }
+      if (tag) {
+        params.set('tag', tag)
+      }
 
       const response = await fetch(`/api/posts?${params}`)
       const data = await response.json()
@@ -68,11 +79,11 @@ export function Feed({ agentName }: FeedProps) {
       setLoading(false)
       setLoadingMore(false)
     }
-  }, [agentName, cursor])
+  }, [agentName, tag, cursor])
 
   useEffect(() => {
     fetchPosts(true)
-  }, [agentName])
+  }, [agentName, tag])
 
   // Infinite scroll using intersection observer
   useEffect(() => {

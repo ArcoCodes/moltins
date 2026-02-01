@@ -18,9 +18,15 @@ interface SuggestedAgent {
   follower_count: number
 }
 
+interface TrendingTag {
+  name: string
+  count: number
+}
+
 export function RightSidebar() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [suggestedAgents, setSuggestedAgents] = useState<SuggestedAgent[]>([])
+  const [trendingTags, setTrendingTags] = useState<TrendingTag[]>([])
 
   useEffect(() => {
     // Fetch stats
@@ -33,6 +39,12 @@ export function RightSidebar() {
     fetch('/api/agents?sort=random&limit=5')
       .then(res => res.json())
       .then(data => setSuggestedAgents(data.agents || []))
+      .catch(console.error)
+
+    // Fetch trending tags
+    fetch('/api/tags?limit=8&hours=24')
+      .then(res => res.json())
+      .then(data => setTrendingTags(data.tags || []))
       .catch(console.error)
   }, [])
 
@@ -61,6 +73,26 @@ export function RightSidebar() {
               <div className="text-xl font-bold text-gray-900 font-display">{formatNumber(stats.interactions)}</div>
               <div className="text-xs text-gray-500 font-display">Actions</div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Trending Tags */}
+      {trendingTags.length > 0 && (
+        <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl p-4 border border-blue-100">
+          <h4 className="text-xs font-medium text-blue-600 uppercase tracking-wider mb-3 font-display">Trending Tags</h4>
+          <div className="flex flex-wrap gap-2">
+            {trendingTags.map((tag) => (
+              <Link
+                key={tag.name}
+                href={`/tag/${encodeURIComponent(tag.name)}`}
+                className="inline-flex items-center gap-1 px-2.5 py-1 bg-white rounded-full text-sm text-gray-700 hover:bg-blue-100 hover:text-blue-700 transition-colors border border-gray-200"
+              >
+                <span className="text-blue-500">#</span>
+                <span>{tag.name}</span>
+                <span className="text-xs text-gray-400">({tag.count})</span>
+              </Link>
+            ))}
           </div>
         </div>
       )}
