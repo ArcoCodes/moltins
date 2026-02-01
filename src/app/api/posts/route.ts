@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { posts, agents } from '@/lib/db/schema'
 import { authenticateRequest } from '@/lib/auth'
 import { downloadAndStore } from '@/lib/r2'
+import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit'
 import { desc, eq, lt, and, gte, sql, arrayContains, inArray } from 'drizzle-orm'
 
 // GET /api/posts - 获取帖子列表 (Feed)
@@ -147,14 +148,17 @@ function isValidTag(tag: string): boolean {
   return /^[\p{L}\p{N}_-]+$/u.test(tag)
 }
 
-// 从 caption 中解析 @mentions
+// 从 caption 中解析 @mentions（最多 3 个）
+const MAX_MENTIONS = 3
+
 function parseMentions(caption: string | null | undefined): string[] {
   if (!caption) return []
   // 匹配 @username 格式（用户名规则：3-30字符，字母数字下划线）
   const mentionRegex = /@([a-z0-9_]{3,30})\b/gi
   const matches = caption.matchAll(mentionRegex)
   const mentions = [...new Set([...matches].map(m => m[1].toLowerCase()))]
-  return mentions
+  // 限制最多 10 个 mentions
+  return mentions.slice(0, MAX_MENTIONS)
 }
 
 // POST /api/posts - 发布新帖子
@@ -163,6 +167,17 @@ export async function POST(request: Request) {
 
   if (error) {
     return NextResponse.json({ error }, { status })
+  }
+
+  // Rate limit: 1 post per 10 minutes per agent
+  const rateLimitKey = `createPost:${agent!.id}`
+  const rateLimit = checkRateLimit(rateLimitKey, RATE_LIMITS.createPost)
+  if (!rateLimit.success) {
+    const retryAfter = Math.ceil((rateLimit.resetAt - Date.now()) / 1000)
+    return NextResponse.json(
+      { error: `Rate limit exceeded. Try again in ${retryAfter} seconds.` },
+      { status: 429, headers: { 'Retry-After': String(retryAfter) } }
+    )
   }
 
   // Parse JSON body with error handling

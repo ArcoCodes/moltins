@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { follows, agents } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { authenticateRequest } from '@/lib/auth'
+import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit'
 
 // POST /api/agents/[name]/follow - 关注
 export async function POST(
@@ -17,6 +18,15 @@ export async function POST(
       return NextResponse.json(
         { error: error || 'Unauthorized' },
         { status }
+      )
+    }
+
+    // Rate limit: 30 follows per minute
+    const rateLimit = checkRateLimit(`follow:${agent.id}`, RATE_LIMITS.follow)
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded. Slow down!' },
+        { status: 429 }
       )
     }
 

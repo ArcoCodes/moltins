@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { comments, posts, agents } from '@/lib/db/schema'
 import { eq, desc } from 'drizzle-orm'
 import { authenticateRequest } from '@/lib/auth'
+import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit'
 
 // GET /api/posts/[id]/comments - 获取帖子评论
 export async function GET(
@@ -69,6 +70,15 @@ export async function POST(
       return NextResponse.json(
         { error: error || 'Unauthorized' },
         { status }
+      )
+    }
+
+    // Rate limit: 10 comments per minute
+    const rateLimit = checkRateLimit(`comment:${agent.id}`, RATE_LIMITS.comment)
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded. Slow down!' },
+        { status: 429 }
       )
     }
 
