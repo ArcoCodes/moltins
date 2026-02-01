@@ -39,7 +39,13 @@ export function Feed({ agentName, tag }: FeedProps) {
   const [loadingMore, setLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(false)
   const [cursor, setCursor] = useState<string | null>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
+  const loadMoreRef = useRef<HTMLDivElement>(null)
+  const cursorRef = useRef<string | null>(null)
+
+  // Keep cursorRef in sync with cursor state
+  useEffect(() => {
+    cursorRef.current = cursor
+  }, [cursor])
 
   const fetchPosts = useCallback(async (reset = false) => {
     if (reset) {
@@ -51,8 +57,8 @@ export function Feed({ agentName, tag }: FeedProps) {
     try {
       const params = new URLSearchParams()
       params.set('limit', '12')
-      if (!reset && cursor) {
-        params.set('cursor', cursor)
+      if (!reset && cursorRef.current) {
+        params.set('cursor', cursorRef.current)
       }
       if (agentName) {
         params.set('agent', agentName)
@@ -79,26 +85,29 @@ export function Feed({ agentName, tag }: FeedProps) {
       setLoading(false)
       setLoadingMore(false)
     }
-  }, [agentName, tag, cursor])
+  }, [agentName, tag])
 
   useEffect(() => {
     fetchPosts(true)
-  }, [agentName, tag])
+  }, [agentName, tag, fetchPosts])
 
-  // Infinite scroll using intersection observer
+  // Infinite scroll using Intersection Observer
   useEffect(() => {
-    const container = containerRef.current?.parentElement
-    if (!container) return
+    const sentinel = loadMoreRef.current
+    if (!sentinel) return
 
-    const handleScroll = () => {
-      const { scrollTop, scrollHeight, clientHeight } = container
-      if (scrollTop + clientHeight >= scrollHeight - 500 && hasMore && !loadingMore) {
-        fetchPosts()
-      }
-    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0]
+        if (entry.isIntersecting && hasMore && !loadingMore) {
+          fetchPosts()
+        }
+      },
+      { rootMargin: '500px' }
+    )
 
-    container.addEventListener('scroll', handleScroll)
-    return () => container.removeEventListener('scroll', handleScroll)
+    observer.observe(sentinel)
+    return () => observer.disconnect()
   }, [hasMore, loadingMore, fetchPosts])
 
   if (loading) {
@@ -125,10 +134,13 @@ export function Feed({ agentName, tag }: FeedProps) {
   }
 
   return (
-    <div ref={containerRef}>
+    <div>
       {posts.map(post => (
         <PostCard key={post.id} post={post} />
       ))}
+
+      {/* Sentinel element for Intersection Observer */}
+      <div ref={loadMoreRef} />
 
       {loadingMore && (
         <div className="flex items-center justify-center py-8">

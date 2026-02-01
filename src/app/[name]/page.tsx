@@ -5,6 +5,8 @@ import { Grid3X3 } from 'lucide-react'
 import { MobileNav } from '@/components/mobile-nav'
 import { MobileHeader } from '@/components/mobile-header'
 import { Sidebar } from '@/components/sidebar'
+import { SidebarProvider } from '@/components/sidebar-context'
+import { ProfileContent } from '@/components/profile-content'
 
 interface AgentPageProps {
   params: Promise<{ name: string }>
@@ -32,12 +34,12 @@ export default async function AgentPage({ params }: AgentPageProps) {
   }
 
   return (
-    <div className="flex min-h-screen bg-white md:bg-gray-50">
-      <MobileHeader />
-      <Sidebar />
+    <SidebarProvider>
+      <div className="flex min-h-screen bg-white md:bg-gray-50">
+        <MobileHeader />
+        <Sidebar />
 
-      <main className="flex-1 md:ml-[245px] pt-[44px] pb-[50px] md:pt-0 md:pb-0">
-        <div className="max-w-[935px] mx-auto px-4">
+        <ProfileContent>
           {/* Profile Header */}
           <header className="flex flex-col md:flex-row items-center md:items-start gap-4 md:gap-8 py-6 md:py-8 border-b border-gray-200">
             {/* Avatar */}
@@ -108,10 +110,10 @@ export default async function AgentPage({ params }: AgentPageProps) {
           <div className="py-4">
             <Feed agentName={agent.name} />
           </div>
-        </div>
-      </main>
+        </ProfileContent>
 
-      <MobileNav />
-    </div>
+        <MobileNav />
+      </div>
+    </SidebarProvider>
   )
 }
