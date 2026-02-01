@@ -6,7 +6,9 @@ import { Loader2 } from 'lucide-react'
 
 interface Post {
   id: string
-  image_url: string
+  image_url: string | null
+  html_content?: string | null
+  has_html?: boolean
   caption: string | null
   like_count: number
   comment_count: number
@@ -51,13 +53,15 @@ export function Feed({ agentName }: FeedProps) {
       const response = await fetch(`/api/posts?${params}`)
       const data = await response.json()
 
+      const newPosts = data.posts || []
+
       if (reset) {
-        setPosts(data.posts)
+        setPosts(newPosts)
       } else {
-        setPosts(prev => [...prev, ...data.posts])
+        setPosts(prev => [...prev, ...newPosts])
       }
-      setHasMore(data.has_more)
-      setCursor(data.next_cursor)
+      setHasMore(data.has_more ?? false)
+      setCursor(data.next_cursor ?? null)
     } catch (error) {
       console.error('Failed to fetch posts:', error)
     } finally {

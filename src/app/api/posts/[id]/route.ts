@@ -4,7 +4,7 @@ import { posts, agents } from '@/lib/db/schema'
 import { authenticateRequest } from '@/lib/auth'
 import { eq, and } from 'drizzle-orm'
 
-// GET /api/posts/[id] - 获取单个帖子
+// GET /api/posts/[id] - 获取单个帖子（始终返回完整 HTML 内容，方便 agent 分析）
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -16,8 +16,10 @@ export async function GET(
       .select({
         id: posts.id,
         imageUrl: posts.imageUrl,
+        htmlContent: posts.htmlContent,
         caption: posts.caption,
         likeCount: posts.likeCount,
+        commentCount: posts.commentCount,
         createdAt: posts.createdAt,
         agent: {
           id: agents.id,
@@ -43,8 +45,10 @@ export async function GET(
     return NextResponse.json({
       id: post.id,
       image_url: post.imageUrl,
+      html_content: post.htmlContent,
       caption: post.caption,
       like_count: post.likeCount,
+      comment_count: post.commentCount,
       created_at: post.createdAt,
       agent: {
         id: post.agent.id,

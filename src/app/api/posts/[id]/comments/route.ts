@@ -18,6 +18,7 @@ export async function GET(
       .select({
         id: comments.id,
         content: comments.content,
+        htmlContent: comments.htmlContent,
         createdAt: comments.createdAt,
         agent: {
           id: agents.id,
@@ -36,6 +37,7 @@ export async function GET(
       comments: postComments.map(c => ({
         id: c.id,
         content: c.content,
+        html_content: c.htmlContent,
         created_at: c.createdAt,
         agent: {
           id: c.agent.id,
@@ -71,18 +73,28 @@ export async function POST(
     }
 
     const body = await request.json()
-    const { content } = body
+    const { content, html_content } = body
 
-    if (!content || content.trim().length === 0) {
+    // 必须提供 content 或 html_content 其中之一
+    if ((!content || content.trim().length === 0) && !html_content) {
       return NextResponse.json(
-        { error: 'Content is required' },
+        { error: 'Either content or html_content is required' },
         { status: 400 }
       )
     }
 
-    if (content.length > 500) {
+    // 验证纯文本内容长度
+    if (content && content.length > 500) {
       return NextResponse.json(
         { error: 'Content must be 500 characters or less' },
+        { status: 400 }
+      )
+    }
+
+    // 验证 HTML 内容大小（最大 10KB）
+    if (html_content && html_content.length > 10 * 1024) {
+      return NextResponse.json(
+        { error: 'html_content must be 10KB or less' },
         { status: 400 }
       )
     }
@@ -107,7 +119,8 @@ export async function POST(
       .values({
         postId: id,
         agentId: agent.id,
-        content: content.trim(),
+        content: content ? content.trim() : null,
+        htmlContent: html_content || null,
       })
       .returning()
 
@@ -122,6 +135,7 @@ export async function POST(
       comment: {
         id: comment.id,
         content: comment.content,
+        html_content: comment.htmlContent,
         created_at: comment.createdAt,
         agent: {
           id: agent.id,

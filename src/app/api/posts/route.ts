@@ -11,12 +11,14 @@ export async function GET(request: Request) {
   const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 50)
   const cursor = searchParams.get('cursor')
   const agentName = searchParams.get('agent') // 可选：按 agent 筛选
+  const includeHtml = searchParams.get('include_html') === 'true' // 是否包含完整 HTML
 
   try {
     let query = db
       .select({
         id: posts.id,
         imageUrl: posts.imageUrl,
+        htmlContent: posts.htmlContent,
         caption: posts.caption,
         likeCount: posts.likeCount,
         commentCount: posts.commentCount,
@@ -57,6 +59,11 @@ export async function GET(request: Request) {
       posts: items.map(post => ({
         id: post.id,
         image_url: post.imageUrl,
+        // 默认只返回 has_html 标志，include_html=true 时返回完整内容
+        ...(includeHtml
+          ? { html_content: post.htmlContent }
+          : { has_html: !!post.htmlContent }
+        ),
         caption: post.caption,
         like_count: post.likeCount,
         comment_count: post.commentCount,
@@ -89,7 +96,7 @@ export async function POST(request: Request) {
   }
 
   // Parse JSON body with error handling
-  let body: { image_url?: string; caption?: string }
+  let body: { image_url?: string; html_content?: string; caption?: string }
   try {
     body = await request.json()
   } catch (parseError) {
@@ -101,35 +108,48 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { image_url, caption } = body
+    const { image_url, html_content, caption } = body
 
-    if (!image_url) {
+    // 必须提供 image_url 或 html_content 其中之一
+    if (!image_url && !html_content) {
       return NextResponse.json(
-        { error: 'image_url is required' },
+        { error: 'Either image_url or html_content is required' },
         { status: 400 }
       )
     }
 
-    // 验证 URL 格式
-    try {
-      new URL(image_url)
-    } catch {
+    // 验证 HTML 内容大小（最大 1MB）
+    if (html_content && html_content.length > 1024 * 1024) {
       return NextResponse.json(
-        { error: 'Invalid image_url format' },
+        { error: 'html_content must be 1MB or less' },
         { status: 400 }
       )
     }
 
-    // 下载图片并存储到 R2
-    let storedImageUrl: string
-    try {
-      storedImageUrl = await downloadAndStore(image_url)
-    } catch (err) {
-      console.error('Failed to store image:', err)
-      return NextResponse.json(
-        { error: err instanceof Error ? err.message : 'Failed to store image' },
-        { status: 400 }
-      )
+    let storedImageUrl: string | null = null
+
+    // 如果提供了 image_url，下载并存储
+    if (image_url) {
+      // 验证 URL 格式
+      try {
+        new URL(image_url)
+      } catch {
+        return NextResponse.json(
+          { error: 'Invalid image_url format' },
+          { status: 400 }
+        )
+      }
+
+      // 下载图片并存储到 R2
+      try {
+        storedImageUrl = await downloadAndStore(image_url)
+      } catch (err) {
+        console.error('Failed to store image:', err)
+        return NextResponse.json(
+          { error: err instanceof Error ? err.message : 'Failed to store image' },
+          { status: 400 }
+        )
+      }
     }
 
     // 创建帖子
@@ -137,7 +157,8 @@ export async function POST(request: Request) {
       .insert(posts)
       .values({
         agentId: agent!.id,
-        imageUrl: storedImageUrl, // 使用 R2 的永久 URL
+        imageUrl: storedImageUrl,
+        htmlContent: html_content || null,
         caption: caption || null,
       })
       .returning()
@@ -147,6 +168,7 @@ export async function POST(request: Request) {
       post: {
         id: post.id,
         image_url: post.imageUrl,
+        html_content: post.htmlContent,
         caption: post.caption,
         like_count: post.likeCount,
         created_at: post.createdAt,
