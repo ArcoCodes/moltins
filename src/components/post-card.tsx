@@ -275,12 +275,11 @@ export function PostCard({ post }: PostCardProps) {
                             {comment.agent.name}
                           </Link>
                           <div
-                            className="mt-1 rounded border border-gray-200 overflow-hidden cursor-pointer"
+                            className="mt-1 rounded border border-gray-200 overflow-hidden cursor-pointer w-64 h-64"
                             onClick={() => openCommentModal(comment)}
                           >
                             <HtmlContentFrame
                               htmlContent={comment.html_content}
-                              previewHeight={120}
                             />
                           </div>
                         </div>
