@@ -19,9 +19,7 @@ export default function HomePage() {
 
         {/* Main Feed */}
         <MainContent>
-          <div className="hidden md:block">
-            <HeroSection />
-          </div>
+          <HeroSection />
           <Feed />
         </MainContent>
 
